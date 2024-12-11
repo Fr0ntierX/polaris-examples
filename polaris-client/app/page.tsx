@@ -1,14 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import {
-  createAxiosRequestInterceptor,
-  createAxiosResponseInterceptor,
-  EphemeralKeyHandler,
-  PolarisSDK,
-} from "@fr0ntier-x/polaris-sdk";
-import axios from "axios";
+import { useCallback, useState } from "react";
 import Loader from "./components/Loader";
+
+import useContainerClient from "./hooks/useContainerClient";
 
 export default function Home() {
   // Request state
@@ -23,29 +18,11 @@ export default function Home() {
   const [responseStatus, setResponseStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Polaris SDK and Axios client
-  const polarisSDK = useMemo(() => new PolarisSDK(new EphemeralKeyHandler()), []);
-  const axiosClient = useMemo(() => {
-    try {
-      const client = axios.create({
-        baseURL: new URL(requestUrl).origin,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+  // The axios client
+  const { axiosClient } = useContainerClient({ requestUrl, enableEncryption });
 
-      if (enableEncryption) {
-        client.interceptors.request.use(createAxiosRequestInterceptor({ polarisSDK }));
-        client.interceptors.response.use(createAxiosResponseInterceptor({ polarisSDK }));
-      }
-
-      return client;
-    } catch (error) {
-      return undefined;
-    }
-  }, [requestUrl, polarisSDK, enableEncryption]);
-
-  const handleAnonymize = useCallback(async () => {
+  // Handle the request
+  const handleRequest = useCallback(async () => {
     if (!axiosClient) return;
 
     setLoading(true);
@@ -53,17 +30,13 @@ export default function Home() {
     setResponse("");
 
     try {
-      let body: any = JSON.stringify({
-        text: requestBody,
-      });
-
-      const { status, statusText, data } = await axiosClient.post(new URL(requestUrl).pathname, body);
-      const parsedData = JSON.parse(data.toString());
+      const { status, statusText, data } = await axiosClient.post(requestUrl, requestBody);
+      const parsedData = Buffer.isBuffer(data) ? data.toString() : JSON.stringify(data);
 
       setResponseStatus(String(status));
 
-      if (parsedData && parsedData.anonymized_text) {
-        setResponse(parsedData.anonymized_text);
+      if (parsedData) {
+        setResponse(parsedData);
       } else {
         setResponse(statusText);
       }
@@ -149,7 +122,7 @@ export default function Home() {
 
       <button
         className="w-full py-2 px-4 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded disabled:text-gray-400 disabled:bg-gray-100 flex justify-center items-center gap-x-3"
-        onClick={handleAnonymize}
+        onClick={handleRequest}
         disabled={!axiosClient || loading}
       >
         Submit Request
