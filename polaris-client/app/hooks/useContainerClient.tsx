@@ -14,7 +14,10 @@ interface Props {
 }
 
 const useContainerClient = ({ requestUrl, enableEncryption }: Props) => {
-  const polarisSDK = useMemo(() => new PolarisSDK(new EphemeralKeyHandler()), []);
+  const polarisSDK = useMemo(
+    () => new PolarisSDK(new EphemeralKeyHandler()),
+    []
+  );
 
   const axiosClient = useMemo(() => {
     try {
@@ -25,9 +28,30 @@ const useContainerClient = ({ requestUrl, enableEncryption }: Props) => {
         },
       });
 
+      // client.interceptors.response.use(
+      //   function (response) {
+      //     // Accessing headers in response interceptor
+      //     console.log("Response Headers:", response.headers);
+
+      //     console.log("All Headers:", Object.keys(response.headers));
+
+      //     return response;
+      //   },
+      //   function (error) {
+      //     // Do something with response error
+      //     return Promise.reject(error);
+      //   }
+      // );
+
       if (enableEncryption) {
-        client.interceptors.request.use(createAxiosRequestInterceptor({ polarisSDK }));
-        client.interceptors.response.use(createAxiosResponseInterceptor({ polarisSDK }));
+        console.log("Axios Client Config:", client.defaults);
+
+        client.interceptors.request.use(
+          createAxiosRequestInterceptor({ polarisSDK })
+        );
+        client.interceptors.response.use(
+          createAxiosResponseInterceptor({ polarisSDK })
+        );
       }
 
       return client;
