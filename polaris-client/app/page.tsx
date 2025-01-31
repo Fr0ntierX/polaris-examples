@@ -8,7 +8,9 @@ import useContainerClient from "./hooks/useContainerClient";
 export default function Home() {
   // Request state
   const [enableEncryption, setEnableEncryption] = useState(true);
-  const [requestUrl, setRequestUrl] = useState("http://35.238.1.96:3000/anonymize");
+  const [requestUrl, setRequestUrl] = useState(
+    "http://35.238.1.96:3000/anonymize"
+  );
   const [requestBody, setRequestBody] = useState(
     '{\n  "text": "Hey, my email is john@example.com and you can reach me at 1800 555-1123"\n}'
   );
@@ -30,8 +32,13 @@ export default function Home() {
     setResponse("");
 
     try {
-      const { status, statusText, data } = await axiosClient.post(requestUrl, requestBody);
-      const parsedData = Buffer.isBuffer(data) ? data.toString() : JSON.stringify(data);
+      const { status, statusText, data } = await axiosClient.post(
+        requestUrl,
+        requestBody
+      );
+      const parsedData = Buffer.isBuffer(data)
+        ? data.toString()
+        : JSON.stringify(data);
 
       setResponseStatus(String(status));
 
@@ -48,13 +55,36 @@ export default function Home() {
     setLoading(false);
   }, [axiosClient, requestBody, requestUrl]);
 
+  const verifyAttestationToken = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      const baseUrl = new URL(requestUrl).origin;
+      const response = await fetch(
+        `/api/attestationToken?url=${encodeURIComponent(baseUrl)}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
+      }
+      const { message } = await response.json();
+
+      alert(message);
+    } catch (error: any) {
+      console.error("Error fetching attestation token", error);
+      alert("Error fetching attestation token");
+    }
+    setLoading(false);
+  }, [axiosClient]);
+
   return (
-    <div className="p-8 flex flex-col items-center justify-center max-w-[600px] mx-auto space-y-8">
+    <div className="p-8 flex flex-col  items-center justify-center max-w-[600px] mx-auto space-y-8">
       <div className="space-y-4">
         <h1 className="text-center text-2xl font-bold">Polaris Client</h1>
         <p className="">
-          This is a sample application for encrypted or unencrypted communication with Polaris containers. The default
-          request is configured for the Fr0ntierX demo Anonymization Service.
+          This is a sample application for encrypted or unencrypted
+          communication with Polaris containers. The default request is
+          configured for the Fr0ntierX demo Anonymization Service.
         </p>
       </div>
 
@@ -69,13 +99,19 @@ export default function Home() {
             onChange={(e) => setEnableEncryption(e.target.checked)}
             checked={enableEncryption}
           />
-          <label htmlFor="enableEncryption" className="text-xs font-bold text-gray-700">
+          <label
+            htmlFor="enableEncryption"
+            className="text-xs font-bold text-gray-700"
+          >
             Enable Encryption
           </label>
         </div>
 
         <div className="flex flex-col">
-          <label htmlFor="requestUrl" className="text-xs font-bold text-gray-700">
+          <label
+            htmlFor="requestUrl"
+            className="text-xs font-bold text-gray-700"
+          >
             URL:
           </label>
           <input
@@ -89,7 +125,10 @@ export default function Home() {
         </div>
 
         <div className="flex flex-col">
-          <label htmlFor="requestBody" className="text-xs font-bold text-gray-700">
+          <label
+            htmlFor="requestBody"
+            className="text-xs font-bold text-gray-700"
+          >
             Body:
           </label>
 
@@ -116,7 +155,9 @@ export default function Home() {
             readOnly
             value={response}
           ></textarea>
-          <div className="absolute right-1/2 top-1/2 my-[-10px]">{loading && <Loader />}</div>
+          <div className="absolute right-1/2 top-1/2 my-[-10px]">
+            {loading && <Loader />}
+          </div>
         </div>
       </div>
 
@@ -126,6 +167,13 @@ export default function Home() {
         disabled={!axiosClient || loading}
       >
         Submit Request
+      </button>
+      <button
+        className="w-full py-2 px-4 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded disabled:text-gray-400 disabled:bg-gray-100 flex justify-center items-center gap-x-3"
+        onClick={verifyAttestationToken}
+        disabled={loading}
+      >
+        Verify container TEE
       </button>
     </div>
   );
